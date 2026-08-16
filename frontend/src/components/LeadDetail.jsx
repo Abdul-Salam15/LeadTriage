@@ -114,9 +114,11 @@ export default function LeadDetail({ jobId, lead, status = null, onSetLeadStatus
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     const text = `${cleaned.name} | ${cleaned.company} | ${cleaned.title} | Score ${scoring.final_score}/100 | ${scoring.tier} | ${formatMoney(cleaned.budget_monthly)}/mo`;
-    await shareText(text, `Lead: ${cleaned.name}`);
+    const subject = encodeURIComponent(`Lead: ${cleaned.name}`);
+    const body = encodeURIComponent(text);
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
   };
 
   const toggleStatus = (target) => {

@@ -59,7 +59,9 @@ export default function Dashboard({ report, onSelectLead, onViewClusters, onView
     const cleaned = lead.cleaned_data || {};
     const scoring = lead.scoring || {};
     const text = `${cleaned.name} | ${cleaned.company} | ${cleaned.title} | Score ${scoring.final_score}/100 | ${scoring.tier} | ${formatBudget(cleaned.budget_monthly)}`;
-    await shareText(text, `Lead: ${cleaned.name}`);
+    const subject = encodeURIComponent(`Lead: ${cleaned.name}`);
+    const body = encodeURIComponent(text);
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
   };
 
   const handleStatus = async (e, lead, status) => {
