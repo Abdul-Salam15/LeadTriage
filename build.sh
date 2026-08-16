@@ -8,10 +8,6 @@ npm install
 npm run build
 cd ..
 
-echo ">>> Copying frontend build into Django static dir..."
-rm -rf backend/leadtriage/frontend_static
-cp -r frontend/dist backend/leadtriage/frontend_static
-
 echo ">>> Installing Python dependencies..."
 pip install -r backend/requirements.txt
 

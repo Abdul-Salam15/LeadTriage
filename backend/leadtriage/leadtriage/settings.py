@@ -137,9 +137,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-# The built React app is copied into frontend_static/ during the Render build
-# and served alongside Django's own static files via Whitenoise.
-STATICFILES_DIRS = [BASE_DIR / "frontend_static"]
+# The built React app lives in frontend/dist.  We point STATICFILES_DIRS there
+# directly so collectstatic (and Whitenoise) can serve the assets without an
+# extra copy step.  On local dev the directory may not exist yet (npm build
+# hasn't run), so we guard against that to avoid a startup crash.
+_frontend_dist = BASE_DIR.parent.parent / "frontend" / "dist"
+STATICFILES_DIRS = [_frontend_dist] if _frontend_dist.exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STORAGES = {
