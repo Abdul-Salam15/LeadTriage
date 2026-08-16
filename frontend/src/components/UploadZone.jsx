@@ -79,7 +79,6 @@ export default function UploadZone({ onUploaded }) {
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,text/csv"
           hidden
           onChange={(e) => handleFiles(e.target.files)}
         />
