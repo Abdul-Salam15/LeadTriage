@@ -144,6 +144,40 @@ $env:DJANGO_SETTINGS_MODULE = "leadtriage.settings"
 & ".\backend\.venv\Scripts\python.exe" -m django test triage api
 ```
 
+## Deploy to Render (free tier)
+
+The repo includes a `render.yaml` blueprint. Render builds the React frontend
+(`build.sh`), serves the API and the SPA from the same origin, and health-checks
+`/healthz`.
+
+1. Push the repo to GitHub (see below).
+2. In [Render](https://render.com), choose **New → Blueprint**, connect your
+   GitHub repo, and pick `render.yaml`. Render auto-creates a free web service
+   named `lead-triage`.
+3. After the deploy succeeds, set the optional `OPENAI_API_KEY` under
+   **Services → lead-triage → Environment** if you want LLM cluster analysis
+   (heuristic mode works without it).
+4. Open the service URL (`https://lead-triage.onrender.com`).
+
+Caveats on the free tier:
+
+- The instance spins down after ~15 min idle; the first request after that can
+  take 30–60s to wake up (cold start).
+- Requests to the web service are capped (~55s proxy timeout). Processing runs
+  in the background, so the UI keeps polling — but for large files prefer
+  **Heuristic** mode (instant); keep **LLM** mode to small files.
+- Uploaded CSVs and job state live on ephemeral disk and are wiped on
+  redeploy/restart.
+
+## Push to GitHub
+
+```powershell
+git remote add origin https://github.com/Abdul-Salam15/LeadTriage.git
+git add .
+git commit -m "Initial commit: Lead Triage System"
+git push -u origin main
+```
+
 ## Notes
 
 - `.env` holds the real `OPENAI_API_KEY` — never commit it. Copy from

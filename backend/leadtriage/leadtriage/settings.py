@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -26,9 +27,17 @@ load_dotenv(BASE_DIR.parent / ".env")
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-skek9s58xk-*!9^+^+ts7zkilsv7ovr_y=t*joo@-9x-lf-idl")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
+DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
+# Allow localhost by default; on Render, the public service URL (and its
+# *.onrender.com domain) are added automatically.
+_allowed_hosts = [h for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h]
+_render_url = os.getenv("RENDER_EXTERNAL_URL", "")
+if _render_url:
+    _render_host = urlparse(_render_url).hostname
+    if _render_host:
+        _allowed_hosts += [_render_host, ".onrender.com"]
+ALLOWED_HOSTS = _allowed_hosts
 
 
 # Application definition
@@ -50,6 +59,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -126,6 +136,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+
+# The built React app is copied into frontend_static/ during the Render build
+# and served alongside Django's own static files via Whitenoise.
+STATICFILES_DIRS = [BASE_DIR / "frontend_static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

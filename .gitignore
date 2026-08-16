@@ -10,6 +10,8 @@ __pycache__/
 backend/.venv/
 backend/leadtriage/db.sqlite3
 backend/leadtriage/media/
+backend/leadtriage/staticfiles/
+backend/leadtriage/frontend_static/
 
 # Node / frontend
 frontend/node_modules/

@@ -79,8 +79,15 @@ export default function App() {
     let procErrorMsg = null;
     // Fire the blocking process call in the background; it resolves when done.
     processJob(job.job_id, useLlm).catch((err) => {
-      procFailed = true;
-      procErrorMsg = err.response?.data?.error || "Processing failed.";
+      // A real API error (e.g. mapping not confirmed) should fail fast.
+      if (err.response) {
+        procFailed = true;
+        procErrorMsg = err.response?.data?.error || "Processing failed.";
+      } else {
+        // Network/proxy timeout (Render free tier drops ~55s requests).
+        // Processing continues server-side, so keep polling job status.
+        console.warn("Process request dropped; continuing to poll.", err);
+      }
     });
 
     try {

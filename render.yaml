@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lead-triage
+    runtime: python
+    plan: free
+    buildCommand: "bash build.sh"
+    startCommand: "gunicorn leadtriage.wsgi:application --chdir backend/leadtriage --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 600"
+    healthCheckPath: /healthz
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # Optional: enable LLM cluster analysis. Set the real value in the
+      # Render dashboard (Services > lead-triage > Environment).
+      - key: OPENAI_API_KEY
+        sync: false
