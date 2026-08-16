@@ -167,25 +167,67 @@ def _heuristic_cluster_analysis(cluster: dict) -> dict:
     avg_authority = cluster.get("avg_authority_score", 0.5)
     avg_budget = cluster.get("avg_budget_score", 0.5)
 
-    # Intent is driven primarily by the combined intelligence score, which
-    # already blends budget, timeline, authority, use-case clarity, fit.
-    if avg_intel >= 0.70:
+    # --- Notes-level boost: scan member leads for strong intent keywords ---
+    # Cluster averages compress individual strong leads.  To close the gap
+    # with LLM scoring we look at the raw notes of member leads and boost
+    # the effective intelligence score when clear purchase-intent language
+    # is present.
+    _STRONG_NOTES = re.compile(
+        r"ready to buy|budget approved|asap|demo next week|need a contract|"
+        r"sign me up|let.s go|launching|need.*live by|high priority|"
+        r"very interested|eager to|excited to|ready to go|right away|"
+        r"need a replacement|system is down",
+        re.I,
+    )
+    _WEAK_NOTES = re.compile(
+        r"just browsing|exploring options|research phase|no budget|"
+        r"not now|maybe next year|intern|student|competitor|"
+        r"checking out your pricing|do not contact",
+        re.I,
+    )
+
+    member_notes = []
+    for lid in cluster.get("member_lead_ids", []):
+        # member_lead_ids are lead_id strings; we do not have the full lead
+        # objects here, so we fall back to the signals summary.
+        pass
+
+    # Use the cluster signals summary as a proxy for individual notes.
+    signals_summary = " ".join(cluster.get("cluster_signals_summary", []))
+    strong_hits = len(_STRONG_NOTES.findall(signals_summary))
+    weak_hits = len(_WEAK_NOTES.findall(signals_summary))
+
+    intel_boost = 0.0
+    # Only boost leads that are not already in NEGATIVE territory.
+    # A lead with very low intelligence should not be rescued by keyword
+    # matching alone -- the underlying data is too weak.
+    if avg_intel >= 0.25 and strong_hits > 0 and weak_hits == 0:
+        intel_boost = min(0.15, strong_hits * 0.05)
+    elif avg_intel >= 0.25 and strong_hits > 0 and weak_hits > 0:
+        intel_boost = min(0.05, (strong_hits - weak_hits) * 0.03)
+
+    adjusted_intel = min(1.0, avg_intel + intel_boost)
+
+    # Intent thresholds: lowered from the original 0.70/0.50/0.35 to match
+    # LLM scoring density.  The LLM path assigns HIGH freely based on note
+    # context; the heuristic path was too conservative with rigid buckets.
+    if adjusted_intel >= 0.60:
         intent = "HIGH"
         action = "CONTACT_NOW"
         timeline = "2-4"
-        prob = 0.70
+        prob = round(min(0.85, 0.50 + 0.50 * adjusted_intel), 2)
         deal_value = "$7,500/month"
-    elif avg_intel >= 0.50:
+    elif adjusted_intel >= 0.40:
         intent = "MEDIUM"
         action = "EXPLORE_FURTHER"
         timeline = "4-8"
-        prob = 0.45
+        prob = round(min(0.60, 0.25 + 0.50 * adjusted_intel), 2)
         deal_value = "$5,000/month"
-    elif avg_intel >= 0.35:
+    elif adjusted_intel >= 0.25:
         intent = "LOW"
         action = "NURTURE"
         timeline = "8-12"
-        prob = 0.20
+        prob = round(min(0.30, 0.10 + 0.40 * adjusted_intel), 2)
         deal_value = "$3,500/month"
     else:
         intent = "NEGATIVE"
@@ -204,6 +246,10 @@ def _heuristic_cluster_analysis(cluster: dict) -> dict:
     else:
         urgency = "LOW"
 
+    # Confidence formula: use adjusted intel and boost when strong notes exist.
+    confidence = round(min(0.95, 0.50 + 0.45 * adjusted_intel), 2)
+    fit_score = round(min(0.95, 0.35 + 0.55 * adjusted_intel), 2)
+
     return {
         "analysis_type": "cluster_analysis",
         "cluster_id": cluster.get("cluster_id"),
@@ -212,7 +258,7 @@ def _heuristic_cluster_analysis(cluster: dict) -> dict:
         "overall_assessment": {
             "cluster_name": cluster.get("cluster_name"),
             "intent_level": intent,
-            "intent_confidence": round(0.55 + 0.4 * avg_intel, 2),
+            "intent_confidence": confidence,
             "recommended_action": action,
             "action_urgency": "WITHIN_48_HOURS" if action == "CONTACT_NOW" else "WITHIN_1_WEEK",
             "estimated_deal_probability": prob,
@@ -230,7 +276,7 @@ def _heuristic_cluster_analysis(cluster: dict) -> dict:
             "key_urgency_signals": cluster.get("cluster_signals_summary", []),
         },
         "fit_assessment": {
-            "overall_fit_score": round(0.3 + 0.6 * avg_intel, 2),
+            "overall_fit_score": fit_score,
             "fit_explanation": "Fit derived from budget, timeline, and use-case clarity signals.",
             "ideal_customer_profile_alignment": {
                 "company_size": "MATCH" if cluster.get("avg_budget_score", 0) >= 0.5 else "PARTIAL",
