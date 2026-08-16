@@ -1,0 +1,22 @@
+# Secrets & local config
+.env
+backend/.env
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+backend/.venv/
+backend/leadtriage/db.sqlite3
+backend/leadtriage/media/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
